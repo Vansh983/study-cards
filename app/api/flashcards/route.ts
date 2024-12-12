@@ -12,9 +12,12 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const prompt = formData.get('prompt') as string;
     const files = formData.getAll('files') as File[];
+    const subject_id = formData.get('subject_id') as string;
     const user_id = formData.get('user_id') as string;
 
-    // Prepare messages array with the system message
+    console.log("Received request with:", { prompt, filesCount: files.length, user_id });
+
+
     const messages: any[] = [
       {
         role: "system",
@@ -22,7 +25,6 @@ export async function POST(req: Request) {
       }
     ];
 
-    // Add user's text prompt if provided
     if (prompt) {
       messages.push({
         role: "user",
@@ -30,7 +32,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Process and add files to messages
     if (files.length > 0) {
       for (const file of files) {
         if (file.type.includes('image')) {
@@ -50,7 +51,6 @@ export async function POST(req: Request) {
             ]
           });
         } else if (file.type === 'application/pdf') {
-          // Add PDF handling here when needed
           messages.push({
             role: "user",
             content: "PDF content will be processed here"
@@ -59,10 +59,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // Add final instruction to ensure proper JSON formatting
     messages.push({
       role: "user",
-      content: "Based on all the content above, generate a comprehensive set of flashcards. Return them in JSON format."
+      content: "Based on all the content above, generate a comprehensive set of flashcards. If there is not enough content, generate as many as possible based on the topic. Return them in JSON format."
     });
 
     const completion: OpenAI.Chat.ChatCompletionCreateParams = {
@@ -72,9 +71,13 @@ export async function POST(req: Request) {
       response_format: { type: "json_object" },
     };
 
+    console.log("Sending request to OpenAI");
+
+
     const response = await ai.chat.completions.create(completion);
     const result = response.choices[0].message.content;
-    console.log(result);
+
+    console.log("Received response from OpenAI:", result);
 
     if (!result) {
       return NextResponse.json(
@@ -85,18 +88,33 @@ export async function POST(req: Request) {
 
     const parsedResult = JSON.parse(result);
 
-    // Store in Firebase
-    if (user_id) {
-      await addDoc(collection(db, 'flashcard_sets'), {
-        title: prompt || 'Untitled Set',
-        description: 'Generated from prompt and/or files',
-        flashcards: parsedResult.flashcards,
-        user_id: user_id,
-        created_at: serverTimestamp(),
-      });
-    }
+    console.log("Parsed result:", parsedResult);
 
-    return NextResponse.json(parsedResult);
+    // Store flashcards in Firebase
+    const docRef = await addDoc(collection(db, 'flashcard_sets'), {
+      title: prompt || 'Untitled Set',
+      description: 'Generated from prompt and/or files',
+      flashcards: parsedResult.flashcards,
+      user_id: user_id,
+      subject_id: subject_id || null,
+      created_at: serverTimestamp(),
+    });
+
+    console.log("Flashcard set stored in Firebase with ID:", docRef.id);
+
+    const responseData = {
+      id: docRef.id,
+      title: prompt || 'Untitled Set',
+      description: 'Generated from prompt and/or files',
+      flashcards: parsedResult.flashcards,
+      user_id: user_id,
+      subject_id: subject_id || null,
+      created_at: new Date().toISOString(),
+    };
+
+    console.log("Response data:", responseData);
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(

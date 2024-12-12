@@ -14,28 +14,20 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp 
 import { ChatMenu } from '@/components/chat-menu';
 import { AuthButton } from '@/components/auth-button';
 import type { Chat } from '@/lib/types';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function Home() {
+  const { user, loading: authLoading } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
-  const [user, setUser] = useState<User | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
-  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      setAuthInitialized(true);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!authInitialized) return;
+    if (authLoading) return;
     if (!user) {
       setChats([]);
       return;
@@ -71,7 +63,7 @@ export default function Home() {
     } catch (error) {
       console.error("Firestore setup error:", error);
     }
-  }, [user, authInitialized, toast]);
+  }, [user, authLoading, toast]);
 
   const handleNewChat = () => {
     setCurrentChat(null);
@@ -90,11 +82,20 @@ export default function Home() {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please sign in to generate flashcards",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append('prompt', prompt);
-      formData.append('user_id', user?.uid || '');
+      formData.append('user_id', user.uid);
       files.forEach(file => {
         formData.append('files', file);
       });
@@ -112,28 +113,31 @@ export default function Home() {
 
       setFlashcards(data.flashcards);
 
-      if (user) {
-        const chatRef = await addDoc(collection(db, 'chats'), {
-          title: prompt || 'Untitled Chat',
-          user_id: user.uid,
-          created_at: serverTimestamp(),
-          flashcards: data.flashcards,
-        });
+      const chatRef = await addDoc(collection(db, 'chats'), {
+        title: prompt || 'Untitled Chat',
+        user_id: user.uid,
+        created_at: serverTimestamp(),
+        flashcards: data.flashcards,
+        prompt: prompt,
+        files: files.map(f => f.name),
+      });
 
-        const newChat: Chat = {
-          id: chatRef.id,
-          title: prompt || 'Untitled Chat',
-          user_id: user.uid,
-          created_at: new Date().toISOString(),
-          flashcards: data.flashcards,
-        };
+      const newChat: Chat = {
+        id: chatRef.id,
+        title: prompt || 'Untitled Chat',
+        user_id: user.uid,
+        created_at: new Date().toISOString(),
+        flashcards: data.flashcards,
+      };
 
-        setCurrentChat(newChat);
-      }
+      setCurrentChat(newChat);
+      
+      setPrompt('');
+      setFiles([]);
 
       toast({
         title: "Success",
-        description: "Flashcards generated successfully!",
+        description: "Flashcards generated and saved successfully!",
       });
     } catch (error) {
       toast({
@@ -161,115 +165,127 @@ export default function Home() {
     setFlashcards(prev => prev.slice(1));
   };
 
+  const loadChat = (chat: Chat) => {
+    setCurrentChat(chat);
+    setFlashcards(chat.flashcards);
+    setPrompt('');
+    setFiles([]);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted">
       <div className="container mx-auto px-4 py-8 max-w-3xl relative">
-        <ChatMenu
-          chats={chats}
-          onChatSelect={(chat) => {
-            setCurrentChat(chat);
-            setFlashcards(chat.flashcards);
-          }}
-          currentUser={user?.uid}
-          onChatsChange={setChats}
-          onNewChat={handleNewChat}
-        />
-        <div className="absolute top-4 right-4">
-          <AuthButton />
-        </div>
-
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <BrainCircuit className="h-12 w-12 text-primary" />
+        {authLoading ? (
+          <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-          <h1 className="text-4xl font-bold mb-2">AI Flashcard Generator</h1>
-          <p className="text-muted-foreground">
-            Enter a topic or concept to generate interactive flashcards
-          </p>
-        </div>
+        ) : (
+          <>
+            <ChatMenu
+              chats={chats}
+              onChatSelect={loadChat}
+              currentUser={user?.uid}
+              onChatsChange={setChats}
+              onNewChat={handleNewChat}
+            />
+            <div className="absolute top-4 right-4">
+              <AuthButton />
+            </div>
 
-        <Card className="p-6 mb-8">
-          {(!currentChat || flashcards.length === 0) && (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Input
-                  placeholder="Enter a topic or concept..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="flex-1"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('file-upload')?.click()}
-                    className="whitespace-nowrap"
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Files
-                  </Button>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    multiple
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <Button
-                    onClick={generateFlashcards}
-                    disabled={loading}
-                    className="whitespace-nowrap"
-                  >
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Generate Flashcards
-                  </Button>
-                </div>
+            <div className="text-center mb-8">
+              <div className="flex justify-center mb-4">
+                <BrainCircuit className="h-12 w-12 text-primary" />
               </div>
-              {files.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 bg-secondary p-2 rounded-md"
-                    >
-                      <span className="text-sm">{file.name}</span>
+              <h1 className="text-4xl font-bold mb-2">AI Flashcard Generator</h1>
+              <p className="text-muted-foreground">
+                Enter a topic or concept to generate interactive flashcards
+              </p>
+            </div>
+
+            {flashcards.length === 0 && (
+              <Card className="p-6 mb-8">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Input
+                      placeholder="Enter a topic or concept..."
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      className="flex-1"
+                    />
+                    <div className="flex gap-2">
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="h-auto p-1"
+                        variant="outline"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        className="whitespace-nowrap"
                       >
-                        ×
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Files
+                      </Button>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        multiple
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                      <Button
+                        onClick={generateFlashcards}
+                        disabled={loading}
+                        className="whitespace-nowrap"
+                      >
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Generate Flashcards
                       </Button>
                     </div>
-                  ))}
+                  </div>
+                  {files.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {files.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-secondary p-2 rounded-md"
+                        >
+                          <span className="text-sm">{file.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-auto p-1"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            <div className="relative h-[500px] w-full">
+              {flashcards && flashcards.map((flashcard, index) => (
+                <Flashcard
+                  key={index}
+                  flashcard={flashcard}
+                  onSwipe={handleSwipe}
+                  index={index}
+                  isTop={index === 0}
+                />
+              ))}
+              {flashcards.length === 0 && !loading && (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                  No flashcards yet. Generate some to get started!
                 </div>
               )}
             </div>
-          )}
-        </Card>
 
-        <div className="relative h-[500px] w-full">
-          {flashcards && flashcards.map((flashcard, index) => (
-            <Flashcard
-              key={index}
-              flashcard={flashcard}
-              onSwipe={handleSwipe}
-              index={index}
-              isTop={index === 0}
-            />
-          ))}
-          {flashcards.length === 0 && !loading && (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              No flashcards yet. Generate some to get started!
-            </div>
-          )}
-        </div>
-
-        {currentChat && (
-          <div className="mb-4 text-sm text-muted-foreground">
-            Current Chat: {currentChat.title}
-          </div>
+            {currentChat && (
+              <div className="mb-4 text-sm text-muted-foreground">
+                Current Chat: {currentChat.title}
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
