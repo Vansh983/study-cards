@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Loader2, BrainCircuit } from 'lucide-react';
+import { Loader2, BrainCircuit, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -14,12 +14,13 @@ export default function Home() {
   const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [files, setFiles] = useState<File[]>([]);
 
   const generateFlashcards = async () => {
-    if (!prompt.trim()) {
+    if (!prompt.trim() && files.length === 0) {
       toast({
         title: "Error",
-        description: "Please enter a prompt",
+        description: "Please enter a prompt or upload files",
         variant: "destructive",
       });
       return;
@@ -27,15 +28,23 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/flashcards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+      const formData = new FormData();
+      formData.append('prompt', prompt);
+      files.forEach(file => {
+        formData.append('files', file);
       });
 
-      if (!response.ok) throw new Error('Failed to generate flashcards');
+      const response = await fetch('/api/flashcards', {
+        method: 'POST',
+        body: formData,
+      });
 
-      const data: FlashcardsResponse = await response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Failed to generate flashcards');
+      }
+
       setFlashcards(data.flashcards);
       toast({
         title: "Success",
@@ -44,12 +53,23 @@ export default function Home() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to generate flashcards. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate flashcards. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSwipe = (direction: 'left' | 'right') => {
@@ -70,26 +90,66 @@ export default function Home() {
         </div>
 
         <Card className="p-6 mb-8">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Input
-              placeholder="Enter a topic or concept..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={generateFlashcards}
-              disabled={loading}
-              className="whitespace-nowrap"
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate Flashcards
-            </Button>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Input
+                placeholder="Enter a topic or concept..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="flex-1"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  className="whitespace-nowrap"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Files
+                </Button>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Button
+                  onClick={generateFlashcards}
+                  disabled={loading}
+                  className="whitespace-nowrap"
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Generate Flashcards
+                </Button>
+              </div>
+            </div>
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-secondary p-2 rounded-md"
+                  >
+                    <span className="text-sm">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      className="h-auto p-1"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
 
         <div className="relative h-[500px] w-full">
-          {flashcards.map((flashcard, index) => (
+          {flashcards && flashcards.map((flashcard, index) => (
             <Flashcard
               key={index}
               flashcard={flashcard}
