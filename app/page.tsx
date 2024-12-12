@@ -151,10 +151,12 @@ export default function Home() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...newFiles]);
     }
+    e.target.value = '';
   };
 
   const removeFile = (index: number) => {
@@ -215,7 +217,10 @@ export default function Home() {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        onClick={() => document.getElementById('file-upload')?.click()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          document.getElementById('file-upload')?.click();
+                        }}
                         className="whitespace-nowrap"
                       >
                         <Upload className="mr-2 h-4 w-4" />

@@ -2,10 +2,65 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import PDFParser from 'pdf2json';
+import { writeFile } from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
 const ai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+async function processPdfFile(file: File): Promise<string> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Create a temporary file path
+      const tempDir = os.tmpdir();
+      const tempFilePath = path.join(tempDir, `temp-${Date.now()}.pdf`);
+
+      // Convert File to Buffer and save to temp file
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      await writeFile(tempFilePath, buffer);
+
+      // Initialize PDF parser
+      const pdfParser = new PDFParser();
+
+      // Handle successful parsing
+      pdfParser.on('pdfParser_dataReady', (pdfData) => {
+        try {
+          // Clean up temp file
+          writeFile(tempFilePath, '').catch(console.error);
+
+          // Extract and decode text from all pages
+          const text = pdfData.Pages
+            .map(page =>
+              page.Texts
+                .map(text => decodeURIComponent(text.R[0].T))
+                .join(' ')
+            )
+            .join('\n\n');
+
+          resolve(text);
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      // Handle parsing errors
+      pdfParser.on('pdfParser_dataError', (error) => {
+        reject(error);
+      });
+
+      // Start parsing
+      pdfParser.loadPDF(tempFilePath);
+
+    } catch (error) {
+      console.error('PDF processing error:', error);
+      reject(new Error('Failed to process PDF file'));
+    }
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +71,6 @@ export async function POST(req: Request) {
     const user_id = formData.get('user_id') as string;
 
     console.log("Received request with:", { prompt, filesCount: files.length, user_id });
-
 
     const messages: any[] = [
       {
@@ -51,10 +105,22 @@ export async function POST(req: Request) {
             ]
           });
         } else if (file.type === 'application/pdf') {
-          messages.push({
-            role: "user",
-            content: "PDF content will be processed here"
-          });
+          try {
+            const pdfText = await processPdfFile(file);
+            // Split text into chunks if it's too long
+            const maxChunkSize = 4000; // Adjust based on your needs
+            const textChunks = splitTextIntoChunks(pdfText, maxChunkSize);
+
+            for (const chunk of textChunks) {
+              messages.push({
+                role: "user",
+                content: `Create flashcards from this section of the PDF content: ${chunk}`
+              });
+            }
+          } catch (error) {
+            console.error('Error processing PDF:', error);
+            throw new Error('Failed to process PDF file');
+          }
         }
       }
     }
@@ -72,7 +138,6 @@ export async function POST(req: Request) {
     };
 
     console.log("Sending request to OpenAI");
-
 
     const response = await ai.chat.completions.create(completion);
     const result = response.choices[0].message.content;
@@ -122,6 +187,30 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+function splitTextIntoChunks(text: string, maxChunkSize: number): string[] {
+  const chunks: string[] = [];
+  let currentChunk = '';
+
+  const sentences = text.split(/[.!?]+\s/);
+
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > maxChunkSize) {
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = sentence;
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    }
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks;
 }
 
 async function fileToBase64(file: File): Promise<string> {
