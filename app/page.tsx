@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, BrainCircuit, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,12 @@ import { Card } from '@/components/ui/card';
 import { Flashcard } from '@/components/flashcard';
 import { useToast } from '@/hooks/use-toast';
 import type { Flashcard as FlashcardType, FlashcardsResponse } from '@/lib/types';
+import { auth, db } from '@/lib/firebase';
+import { User } from 'firebase/auth';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ChatMenu } from '@/components/chat-menu';
+import { AuthButton } from '@/components/auth-button';
+import type { Chat } from '@/lib/types';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
@@ -15,6 +21,64 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      setAuthInitialized(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!authInitialized) return;
+    if (!user) {
+      setChats([]);
+      return;
+    }
+
+    try {
+      const q = query(
+        collection(db, 'chats'),
+        where('user_id', '==', user.uid),
+        orderBy('created_at', 'desc')
+      );
+
+      const unsubscribe = onSnapshot(q, 
+        (snapshot) => {
+          const chatsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            created_at: doc.data().created_at?.toDate().toISOString() || new Date().toISOString(),
+          })) as Chat[];
+          setChats(chatsData);
+        },
+        (error) => {
+          console.error("Firestore error:", error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch chats. Please try again.",
+            variant: "destructive",
+          });
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Firestore setup error:", error);
+    }
+  }, [user, authInitialized, toast]);
+
+  const handleNewChat = () => {
+    setCurrentChat(null);
+    setFlashcards([]);
+    setPrompt('');
+    setFiles([]);
+  };
 
   const generateFlashcards = async () => {
     if (!prompt.trim() && files.length === 0) {
@@ -30,6 +94,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('prompt', prompt);
+      formData.append('user_id', user?.uid || '');
       files.forEach(file => {
         formData.append('files', file);
       });
@@ -46,6 +111,26 @@ export default function Home() {
       }
 
       setFlashcards(data.flashcards);
+
+      if (user) {
+        const chatRef = await addDoc(collection(db, 'chats'), {
+          title: prompt || 'Untitled Chat',
+          user_id: user.uid,
+          created_at: serverTimestamp(),
+          flashcards: data.flashcards,
+        });
+
+        const newChat: Chat = {
+          id: chatRef.id,
+          title: prompt || 'Untitled Chat',
+          user_id: user.uid,
+          created_at: new Date().toISOString(),
+          flashcards: data.flashcards,
+        };
+
+        setCurrentChat(newChat);
+      }
+
       toast({
         title: "Success",
         description: "Flashcards generated successfully!",
@@ -78,7 +163,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 max-w-3xl relative">
+        <ChatMenu
+          chats={chats}
+          onChatSelect={(chat) => {
+            setCurrentChat(chat);
+            setFlashcards(chat.flashcards);
+          }}
+          currentUser={user?.uid}
+          onChatsChange={setChats}
+          onNewChat={handleNewChat}
+        />
+        <div className="absolute top-4 right-4">
+          <AuthButton />
+        </div>
+
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <BrainCircuit className="h-12 w-12 text-primary" />
@@ -90,62 +189,64 @@ export default function Home() {
         </div>
 
         <Card className="p-6 mb-8">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Input
-                placeholder="Enter a topic or concept..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="flex-1"
-              />
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                  className="whitespace-nowrap"
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Files
-                </Button>
-                <input
-                  id="file-upload"
-                  type="file"
-                  multiple
-                  accept=".pdf,.png,.jpg,.jpeg"
-                  className="hidden"
-                  onChange={handleFileChange}
+          {(!currentChat || flashcards.length === 0) && (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Input
+                  placeholder="Enter a topic or concept..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="flex-1"
                 />
-                <Button
-                  onClick={generateFlashcards}
-                  disabled={loading}
-                  className="whitespace-nowrap"
-                >
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Generate Flashcards
-                </Button>
-              </div>
-            </div>
-            {files.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {files.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 bg-secondary p-2 rounded-md"
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                    className="whitespace-nowrap"
                   >
-                    <span className="text-sm">{file.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      className="h-auto p-1"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Files
+                  </Button>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <Button
+                    onClick={generateFlashcards}
+                    disabled={loading}
+                    className="whitespace-nowrap"
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Generate Flashcards
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {files.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 bg-secondary p-2 rounded-md"
+                    >
+                      <span className="text-sm">{file.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="h-auto p-1"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </Card>
 
         <div className="relative h-[500px] w-full">
@@ -164,6 +265,12 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {currentChat && (
+          <div className="mb-4 text-sm text-muted-foreground">
+            Current Chat: {currentChat.title}
+          </div>
+        )}
       </div>
     </main>
   );

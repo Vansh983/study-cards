@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const ai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,6 +12,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const prompt = formData.get('prompt') as string;
     const files = formData.getAll('files') as File[];
+    const user_id = formData.get('user_id') as string;
 
     // Prepare messages array with the system message
     const messages: any[] = [
@@ -80,9 +83,22 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json(JSON.parse(result));
+    const parsedResult = JSON.parse(result);
+
+    // Store in Firebase
+    if (user_id) {
+      await addDoc(collection(db, 'flashcard_sets'), {
+        title: prompt || 'Untitled Set',
+        description: 'Generated from prompt and/or files',
+        flashcards: parsedResult.flashcards,
+        user_id: user_id,
+        created_at: serverTimestamp(),
+      });
+    }
+
+    return NextResponse.json(parsedResult);
   } catch (error) {
-    console.error('OpenAI API error:', error);
+    console.error('API error:', error);
     return NextResponse.json(
       { error: 'Failed to generate flashcards' },
       { status: 500 }
