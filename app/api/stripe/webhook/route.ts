@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2023-10-16',
+    apiVersion: '2024-11-20.acacia',
 });
 
 export async function POST(req: Request) {
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
 
                 // Get customer email from Stripe
                 const customer = await stripe.customers.retrieve(customerId);
+                //@ts-ignore
                 const userEmail = customer.email;
 
                 if (userEmail) {
@@ -55,8 +56,9 @@ export async function POST(req: Request) {
                 const deletedSubscription = event.data.object as Stripe.Subscription;
                 const deletedCustomerId = deletedSubscription.customer as string;
                 const deletedCustomer = await stripe.customers.retrieve(deletedCustomerId);
-
+                //@ts-ignore
                 if (deletedCustomer.email) {
+                    //@ts-ignore
                     const userRef = doc(db, 'users', deletedCustomer.email);
                     await setDoc(userRef, {
                         subscriptionStatus: 'canceled',
