@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import PDFParser from 'pdf2json';
 import { writeFile } from 'fs/promises';
 import path from 'path';
@@ -62,6 +62,53 @@ async function processPdfFile(file: File): Promise<string> {
   });
 }
 
+async function checkUserUsage(userId: string): Promise<{ canUse: boolean, reason?: string }> {
+  try {
+    // Get user document
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+
+    // Check if user has an active subscription
+    if (userData?.subscriptionStatus === 'active') {
+      return { canUse: true };
+    }
+
+    // Check daily usage
+    const today = new Date().toISOString().split('T')[0];
+    const usageRef = doc(db, 'usage', `${userId}_${today}`);
+    const usageDoc = await getDoc(usageRef);
+
+    if (!usageDoc.exists()) {
+      // First use of the day
+      await setDoc(usageRef, {
+        count: 1,
+        userId,
+        date: today,
+      });
+      return { canUse: true };
+    }
+
+    const usageData = usageDoc.data();
+    if (usageData.count >= 1) {
+      return {
+        canUse: false,
+        reason: 'Daily free limit reached. Please upgrade to continue using the service.'
+      };
+    }
+
+    // Increment usage count
+    await setDoc(usageRef, {
+      count: increment(1),
+    }, { merge: true });
+
+    return { canUse: true };
+  } catch (error) {
+    console.error('Error checking user usage:', error);
+    return { canUse: false, reason: 'Error checking usage limits' };
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -69,6 +116,15 @@ export async function POST(req: Request) {
     const files = formData.getAll('files') as File[];
     const subject_id = formData.get('subject_id') as string;
     const user_id = formData.get('user_id') as string;
+
+    // Check usage limits
+    const usageCheck = await checkUserUsage(user_id);
+    if (!usageCheck.canUse) {
+      return NextResponse.json(
+        { error: usageCheck.reason },
+        { status: 402 } // 402 Payment Required
+      );
+    }
 
     console.log("Received request with:", { prompt, filesCount: files.length, user_id });
 
