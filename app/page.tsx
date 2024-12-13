@@ -312,6 +312,7 @@ export default function Home() {
           </>
         )}
       </div>
+      <p className="text-center text-muted-foreground text-sm mt-4"><a href="https://www.linkedin.com/in/vanshsood" target="_blank" rel="noopener noreferrer">Made for fun by Vansh Sood</a></p>
     </main>
   );
 }

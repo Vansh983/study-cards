@@ -7,6 +7,7 @@ import { Flashcard as FlashcardType } from '@/lib/types';
 import { BackgroundVideo } from './background-video';
 import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SnappingFlashcardProps {
   flashcard: FlashcardType;
@@ -16,23 +17,144 @@ interface SnappingFlashcardProps {
 
 export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlashcardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const frontTextRef = useRef<HTMLDivElement>(null);
+  const backTextRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [spokenText, setSpokenText] = useState("");
+  const [currentSide, setCurrentSide] = useState<'front' | 'back' | null>(null);
+  const preferredVoices = useRef<SpeechSynthesisVoice[]>([]);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // Get initial list of voices and select preferred ones
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
 
-  const speak = (text: string) => {
-    if ('speechSynthesis' in window) {
+      // Filter for English voices first
+      const englishVoices = availableVoices.filter(
+        voice => voice.lang.startsWith('en-')
+      );
+
+      // Try to get common system voices (Microsoft David, Samantha, Google US)
+      const commonVoices = englishVoices.filter(voice => 
+        voice.name.includes('David') ||
+        voice.name.includes('Samantha') ||
+        voice.name.includes('Google') ||
+        voice.name.includes('Daniel') ||
+        voice.name.includes('Karen')
+      );
+
+      // If we have common voices, use them, otherwise use first 3 English voices
+      preferredVoices.current = commonVoices.length >= 3 
+        ? commonVoices.slice(0, 3) 
+        : englishVoices.slice(0, 3);
+
+      // If no English voices, fall back to first 3 available voices
+      if (preferredVoices.current.length === 0) {
+        preferredVoices.current = availableVoices.slice(0, 3);
+      }
+    };
+
+    loadVoices();
+    // Chrome loads voices asynchronously
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    // Setup intersection observer for auto-play
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !isPaused) {
+            speak(flashcard.front, 'front');
+          }
+        });
+      },
+      {
+        threshold: 0.7, // Card needs to be 70% visible
+      }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+      window.speechSynthesis.cancel();
+    };
+  }, [flashcard, isPaused]);
+
+  const handleCardTap = () => {
+    setIsPaused(!isPaused);
+    if (!isPaused) {
+      // Pause the audio
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setSpokenText("");
+      setCurrentSide(null);
+    } else {
+      // Resume from the current side or start from front
+      if (currentSide) {
+        speak(currentSide === 'front' ? flashcard.front : flashcard.back, currentSide);
+      } else {
+        speak(flashcard.front, 'front');
+      }
+    }
+  };
+
+  const speak = (text: string, side: 'front' | 'back') => {
+    if ('speechSynthesis' in window && !isPaused) {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
+      setSpokenText("");
+      setCurrentSide(side);
       
       const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Get random voice from preferred voices
+      if (preferredVoices.current.length > 0) {
+        const randomVoice = preferredVoices.current[
+          Math.floor(Math.random() * preferredVoices.current.length)
+        ];
+        utterance.voice = randomVoice;
+      }
+
       utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setSpokenText("");
+        setCurrentSide(null);
+        // Auto-play back side after front is done
+        if (side === 'front' && !isPaused) {
+          setTimeout(() => speak(flashcard.back, 'back'), 500);
+        }
+      };
+
+      // Track spoken words
+      utterance.onboundary = (event) => {
+        const textUpToIndex = text.substring(0, event.charIndex + event.charLength);
+        setSpokenText(textUpToIndex);
+      };
+      
       window.speechSynthesis.speak(utterance);
     }
+  };
+
+  const getHighlightedText = (text: string, isCurrentSide: boolean) => {
+    if (!isCurrentSide || !spokenText) {
+      return <span className="text-white/70">{text}</span>;
+    }
+
+    return (
+      <>
+        <span className="text-white">{spokenText}</span>
+        <span className="text-white/70">{text.slice(spokenText.length)}</span>
+      </>
+    );
   };
 
   return (
@@ -42,19 +164,30 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
+      onClick={handleCardTap}
     >
       {mounted && <BackgroundVideo isVisible={true} videoPath={videoPath} />}
-      <div className={`absolute inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300 opacity-100`} />
+      <div 
+        className={cn(
+          "absolute inset-0 backdrop-blur-[2px] transition-all duration-300",
+          isPaused ? "bg-black/60" : "bg-black/30"
+        )} 
+      />
       <div className="relative w-full h-full p-6 flex flex-col">
         <div className="flex flex-col gap-6 h-full text-white">
           <div className="text-lg font-medium border-b border-white/20 pb-4 flex-1 overflow-auto">
             <div className="flex justify-between items-start">
-              <div>{flashcard.front}</div>
+              <div ref={frontTextRef}>
+                {getHighlightedText(flashcard.front, currentSide === 'front')}
+              </div>
               <Button 
                 variant="ghost" 
                 size="icon"
                 className="text-white hover:text-white/80"
-                onClick={() => speak(flashcard.front)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speak(flashcard.front, 'front');
+                }}
                 disabled={isSpeaking}
               >
                 <Volume2 className="h-5 w-5" />
@@ -63,12 +196,17 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
           </div>
           <div className="text-lg flex-1 overflow-auto">
             <div className="flex justify-between items-start">
-              <div>{flashcard.back}</div>
+              <div ref={backTextRef}>
+                {getHighlightedText(flashcard.back, currentSide === 'back')}
+              </div>
               <Button 
                 variant="ghost" 
                 size="icon"
                 className="text-white hover:text-white/80"
-                onClick={() => speak(flashcard.back)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speak(flashcard.back, 'back');
+                }}
                 disabled={isSpeaking}
               >
                 <Volume2 className="h-5 w-5" />
