@@ -170,7 +170,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       <div 
         className={cn(
           "absolute inset-0 backdrop-blur-[2px] transition-all duration-300",
-          isPaused ? "bg-black/60" : "bg-black/30"
+          isPaused ? "bg-black" : "bg-black/30"
         )} 
       />
       <div className="relative w-full h-full p-6 flex flex-col">
