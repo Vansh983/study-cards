@@ -25,7 +25,7 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
-  const [isSnappingView, setIsSnappingView] = useState(false);
+  const [isSnappingView, setIsSnappingView] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
