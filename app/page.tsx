@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Loader2, BrainCircuit, Upload } from 'lucide-react';
+import { Loader2, BrainCircuit, Upload, ViewIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Flashcard } from '@/components/flashcard';
+import { SnappingFlashcard } from '@/components/snapping-flashcard';
 import { useToast } from '@/hooks/use-toast';
 import type { Flashcard as FlashcardType, FlashcardsResponse } from '@/lib/types';
 import { auth, db } from '@/lib/firebase';
-import { User } from 'firebase/auth';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ChatMenu } from '@/components/chat-menu';
 import { AuthButton } from '@/components/auth-button';
@@ -25,6 +25,7 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+  const [isSnappingView, setIsSnappingView] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -190,10 +191,21 @@ export default function Home() {
               onChatsChange={setChats}
               onNewChat={handleNewChat}
             />
-            <div className="absolute top-4 right-4">
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSnappingView(!isSnappingView)}
+                className="relative"
+              >
+                <ViewIcon className="h-5 w-5" />
+              </Button>
               <AuthButton />
             </div>
 
+
+            {flashcards.length === 0 && (
+           <>
             <div className="text-center mb-8">
               <div className="flex justify-center mb-4">
                 <BrainCircuit className="h-12 w-12 text-primary" />
@@ -203,8 +215,6 @@ export default function Home() {
                 Enter a topic or concept to generate interactive flashcards
               </p>
             </div>
-
-            {flashcards.length === 0 && (
               <Card className="p-6 mb-8">
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -266,28 +276,37 @@ export default function Home() {
                   )}
                 </div>
               </Card>
+            </>
             )}
 
-            <div className="relative h-[500px] w-full">
-              {flashcards && flashcards.map((flashcard, index) => (
-                <Flashcard
-                  key={index}
-                  flashcard={flashcard}
-                  onSwipe={handleSwipe}
-                  index={index}
-                  isTop={index === 0}
-                />
-              ))}
-              {flashcards.length === 0 && !loading && (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                  No flashcards yet. Generate some to get started!
+            {isSnappingView ? (
+              <div className="relative w-full h-[80vh] overflow-y-auto snap-y snap-mandatory flex flex-col items-center mt-10">
+                <div className="w-full flex flex-col items-center gap-0">
+                  {flashcards.map((flashcard, index) => (
+                    <SnappingFlashcard
+                      key={index}
+                      flashcard={flashcard}
+                      index={index}
+                    />
+                  ))}
                 </div>
-              )}
-            </div>
-
-            {currentChat && (
-              <div className="mb-4 text-sm text-muted-foreground">
-                Current Chat: {currentChat.title}
+              </div>
+            ) : (
+              <div className="relative h-[500px] w-full">
+                {flashcards.map((flashcard, index) => (
+                  <Flashcard
+                    key={index}
+                    flashcard={flashcard}
+                    onSwipe={handleSwipe}
+                    index={index}
+                    isTop={index === 0}
+                  />
+                ))}
+                {flashcards.length === 0 && !loading && (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                    No flashcards yet. Generate some to get started!
+                  </div>
+                )}
               </div>
             )}
           </>
