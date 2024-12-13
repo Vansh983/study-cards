@@ -9,9 +9,10 @@ import { BackgroundVideo } from './background-video';
 interface SnappingFlashcardProps {
   flashcard: FlashcardType;
   index: number;
+  videoPath?: string;
 }
 
-export function SnappingFlashcard({ flashcard, index }: SnappingFlashcardProps) {
+export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlashcardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -27,7 +28,7 @@ export function SnappingFlashcard({ flashcard, index }: SnappingFlashcardProps) 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
     >
-      {mounted && <BackgroundVideo isVisible={true} />}
+      {mounted && <BackgroundVideo isVisible={true} videoPath={videoPath} />}
       <div className={`absolute inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300 opacity-100`} />
       <div className="relative w-full h-full p-6 flex flex-col">
         <div className="flex flex-col gap-6 h-full text-white">

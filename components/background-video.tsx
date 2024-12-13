@@ -2,14 +2,25 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+// Add array of video paths
+const VIDEO_PATHS = [
+  '/background.mp4',
+  '/background2.mp4',
+  '/background3.mp4',
+];
+
 interface BackgroundVideoProps {
   isVisible: boolean;
+  videoPath?: string; // Make videoPath optional
 }
 
-export function BackgroundVideo({ isVisible }: BackgroundVideoProps) {
+export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  
+  // Select random video path if none provided
+  const selectedVideoPath = videoPath || VIDEO_PATHS[Math.floor(Math.random() * VIDEO_PATHS.length)];
 
   useEffect(() => {
     if (!videoRef.current || !isLoaded || hasError) return;
@@ -83,7 +94,7 @@ export function BackgroundVideo({ isVisible }: BackgroundVideoProps) {
       onLoadedMetadata={handleLoadedMetadata}
       onError={handleError}
     >
-      <source src="/background.mp4" type="video/mp4" />
+      <source src={selectedVideoPath} type="video/mp4" />
     </video>
   );
 } 
