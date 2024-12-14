@@ -41,7 +41,7 @@ export default function Home() {
         orderBy('created_at', 'desc')
       );
 
-      const unsubscribe = onSnapshot(q, 
+      const unsubscribe = onSnapshot(q,
         (snapshot) => {
           const chatsData = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -132,7 +132,7 @@ export default function Home() {
       };
 
       setCurrentChat(newChat);
-      
+
       setPrompt('');
       setFiles([]);
 
@@ -165,7 +165,7 @@ export default function Home() {
   };
 
   const handleSwipe = (direction: 'left' | 'right') => {
-    setFlashcards(prev => prev.slice(1));
+    direction === 'left' ? setFlashcards(prev => prev.slice(0, -1)) : setFlashcards(prev => prev.slice(1))
   };
 
   const loadChat = (chat: Chat) => {
@@ -205,78 +205,78 @@ export default function Home() {
 
 
             {flashcards.length === 0 && (
-           <>
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <BrainCircuit className="h-12 w-12 text-primary" />
-              </div>
-              <h1 className="text-4xl font-bold mb-2">AI Flashcard Generator</h1>
-              <p className="text-muted-foreground">
-                Enter a topic or concept to generate interactive flashcards
-              </p>
-            </div>
-              <Card className="p-6 mb-8">
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Input
-                      placeholder="Enter a topic or concept..."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      className="flex-1"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          document.getElementById('file-upload')?.click();
-                        }}
-                        className="whitespace-nowrap"
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Files
-                      </Button>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        multiple
-                        accept=".pdf,.png,.jpg,.jpeg"
-                        className="hidden"
-                        onChange={handleFileChange}
-                      />
-                      <Button
-                        onClick={generateFlashcards}
-                        disabled={loading}
-                        className="whitespace-nowrap"
-                      >
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Generate Flashcards
-                      </Button>
-                    </div>
+              <>
+                <div className="text-center mb-8">
+                  <div className="flex justify-center mb-4">
+                    <BrainCircuit className="h-12 w-12 text-primary" />
                   </div>
-                  {files.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {files.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 bg-secondary p-2 rounded-md"
-                        >
-                          <span className="text-sm">{file.name}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(index)}
-                            className="h-auto p-1"
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <h1 className="text-4xl font-bold mb-2">AI Flashcard Generator</h1>
+                  <p className="text-muted-foreground">
+                    Enter a topic or concept to generate interactive flashcards
+                  </p>
                 </div>
-              </Card>
-            </>
+                <Card className="p-6 mb-8">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Input
+                        placeholder="Enter a topic or concept..."
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        className="flex-1"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            document.getElementById('file-upload')?.click();
+                          }}
+                          className="whitespace-nowrap"
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Files
+                        </Button>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          multiple
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                        <Button
+                          onClick={generateFlashcards}
+                          disabled={loading}
+                          className="whitespace-nowrap"
+                        >
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Generate Flashcards
+                        </Button>
+                      </div>
+                    </div>
+                    {files.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {files.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 bg-secondary p-2 rounded-md"
+                          >
+                            <span className="text-sm">{file.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFile(index)}
+                              className="h-auto p-1"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </>
             )}
 
             {isSnappingView ? (
@@ -292,7 +292,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="relative h-[500px] w-full">
+              <div className="relative h-[500px] w-full mt-10">
                 {flashcards.map((flashcard, index) => (
                   <Flashcard
                     key={index}

@@ -18,7 +18,7 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  
+
   // Select random video path if none provided
   const selectedVideoPath = videoPath || VIDEO_PATHS[Math.floor(Math.random() * VIDEO_PATHS.length)];
 
@@ -26,7 +26,7 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
     if (!videoRef.current || !isLoaded || hasError) return;
 
     const video = videoRef.current;
-    
+
     // Set random start time and play immediately
     try {
       const duration = video.duration || 0;
@@ -38,21 +38,21 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
       const attemptPlay = async () => {
         try {
           await video.play();
-        console.log('Video play');
+          console.log('Video play');
 
         } catch (err) {
           if (err instanceof Error && err.name !== 'AbortError') {
             console.error('Video play failed:', err);
             setHasError(true);
           }
-        console.log('Video paused');
+          console.log('Video paused');
 
         }
       };
 
       attemptPlay();
     } catch (err) {
-        console.log('Video paused');
+      console.log('Video paused');
       console.error('Video control error:', err);
       setHasError(true);
     }
@@ -62,7 +62,7 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
       try {
         video.pause();
         console.log('Video paused');
-        
+
       } catch (err) {
         // Ignore cleanup errors
       }

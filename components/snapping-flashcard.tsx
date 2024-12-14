@@ -8,6 +8,7 @@ import { BackgroundVideo } from './background-video';
 import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/lib/store';
 
 interface SnappingFlashcardProps {
   flashcard: FlashcardType;
@@ -26,10 +27,11 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   const [currentSide, setCurrentSide] = useState<'front' | 'back' | null>(null);
   const preferredVoices = useRef<SpeechSynthesisVoice[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const isMuted = useAppStore((state) => state.isMuted);
 
   useEffect(() => {
     setMounted(true);
-    
+
     // Get initial list of voices and select preferred ones
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
@@ -41,7 +43,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       );
 
       // Try to get common system voices (Microsoft David, Samantha, Google US)
-      const commonVoices = englishVoices.filter(voice => 
+      const commonVoices = englishVoices.filter(voice =>
         voice.name.includes('David') ||
         voice.name.includes('Samantha') ||
         voice.name.includes('Google') ||
@@ -50,8 +52,8 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       );
 
       // If we have common voices, use them, otherwise use first 3 English voices
-      preferredVoices.current = commonVoices.length >= 3 
-        ? commonVoices.slice(0, 3) 
+      preferredVoices.current = commonVoices.length >= 3
+        ? commonVoices.slice(0, 3)
         : englishVoices.slice(0, 3);
 
       // If no English voices, fall back to first 3 available voices
@@ -107,14 +109,14 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   };
 
   const speak = (text: string, side: 'front' | 'back') => {
-    if ('speechSynthesis' in window && !isPaused) {
+    if ('speechSynthesis' in window && !isPaused && !isMuted) {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       setSpokenText("");
       setCurrentSide(side);
-      
+
       const utterance = new SpeechSynthesisUtterance(text);
-      
+
       // Get random voice from preferred voices
       if (preferredVoices.current.length > 0) {
         const randomVoice = preferredVoices.current[
@@ -129,7 +131,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
         setSpokenText("");
         setCurrentSide(null);
         // Auto-play back side after front is done
-        if (side === 'front' && !isPaused) {
+        if (side === 'front' && !isPaused && !isMuted) {
           setTimeout(() => speak(flashcard.back, 'back'), 500);
         }
       };
@@ -139,7 +141,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
         const textUpToIndex = text.substring(0, event.charIndex + event.charLength);
         setSpokenText(textUpToIndex);
       };
-      
+
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -167,42 +169,43 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       onClick={handleCardTap}
     >
       {mounted && <BackgroundVideo isVisible={true} videoPath={videoPath} />}
-      <div 
+      <div
         className={cn(
           "absolute inset-0 backdrop-blur-[2px] transition-all duration-300",
-          isPaused ? "bg-black" : "bg-black/30"
-        )} 
+          isPaused ? "bg-black" : "bg-black/50"
+        )}
       />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-white hover:text-white/80 ml-4 absolute top-5 right-5"
+        onClick={(e) => {
+          e.stopPropagation();
+          speak(flashcard.front, 'front');
+        }}
+        disabled={isSpeaking}
+      >
+        <Volume2 className="h-5 w-5" />
+      </Button>
       <div className="relative w-full h-full p-6 flex flex-col">
         <div className="flex flex-col gap-6 h-full text-white">
           <div className="text-lg font-medium border-b border-white/20 pb-4 flex-1 overflow-auto">
-            <div className="flex justify-between items-start">
-              <div ref={frontTextRef}>
+            <div className="flex justify-between items-center h-full">
+              <div ref={frontTextRef} className="flex-1 flex items-center justify-center text-center">
                 {getHighlightedText(flashcard.front, currentSide === 'front')}
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="text-white hover:text-white/80"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  speak(flashcard.front, 'front');
-                }}
-                disabled={isSpeaking}
-              >
-                <Volume2 className="h-5 w-5" />
-              </Button>
+
             </div>
           </div>
           <div className="text-lg flex-1 overflow-auto">
-            <div className="flex justify-between items-start">
-              <div ref={backTextRef}>
+            <div className="flex justify-between items-center h-full">
+              <div ref={backTextRef} className="flex-1 flex items-center justify-center text-center">
                 {getHighlightedText(flashcard.back, currentSide === 'back')}
               </div>
-              <Button 
+              {/* <Button 
                 variant="ghost" 
                 size="icon"
-                className="text-white hover:text-white/80"
+                className="text-white hover:text-white/80 ml-4"
                 onClick={(e) => {
                   e.stopPropagation();
                   speak(flashcard.back, 'back');
@@ -210,7 +213,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
                 disabled={isSpeaking}
               >
                 <Volume2 className="h-5 w-5" />
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>

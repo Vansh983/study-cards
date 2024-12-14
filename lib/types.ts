@@ -24,3 +24,20 @@ export interface Subject {
   user_id: string;
   created_at: string;
 }
+
+export type CardType = 'default' | 'video';
+
+export interface AppState {
+  isLoginModalOpen: boolean;
+  setLoginModalOpen: (open: boolean) => void;
+  user: User | null;
+  setUser: (user: User | null) => void;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  image?: string;
+}
+

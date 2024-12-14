@@ -1,4 +1,6 @@
-'use client';
+// AuthButton.tsx
+
+"use client";
 
 import { useState } from 'react';
 import { LogIn, LogOut, User } from 'lucide-react';
@@ -12,9 +14,17 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithRedirect, signOut } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  signInWithRedirect,
+  signOut as firebaseSignOut,
+} from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
 
 export function AuthButton() {
@@ -23,29 +33,40 @@ export function AuthButton() {
   const { toast } = useToast();
 
   const handleSignIn = async () => {
+    console.log('Starting sign-in process...');
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account',
+      });
+      console.log('Initiating sign-in with popup...');
       await signInWithRedirect(auth, provider);
+      console.log('Sign-in with popup completed');
     } catch (error) {
+      console.error('Sign-in error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to sign in. Please try again.',
+        description:
+          'Failed to sign in. Please check your network connection and try again.',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
-
   const handleSignOut = async () => {
+    console.log('Starting sign-out process...');
     try {
       setLoading(true);
-      await signOut(auth);
+      await firebaseSignOut(auth);
+      console.log('Sign-out completed');
     } catch (error) {
+      console.error('Sign-out error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to sign out. Please try again.',
+        description:
+          'Failed to sign out. Please check your network connection and try again.',
         variant: 'destructive',
       });
     } finally {
@@ -61,7 +82,10 @@ export function AuthButton() {
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.photoURL || undefined} />
               <AvatarFallback>
-                {user.displayName?.split(' ').map((n: string) => n[0]).join('') || user.email?.[0].toUpperCase()}
+                {user.displayName
+                  ?.split(' ')
+                  .map((n: string) => n[0])
+                  .join('') || user.email?.[0].toUpperCase()}
               </AvatarFallback>
             </Avatar>
           ) : (
@@ -74,18 +98,28 @@ export function AuthButton() {
           <>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user.displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                <p className="text-sm font-medium leading-none">
+                  {user.displayName}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user.email}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} disabled={loading}>
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              disabled={loading}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </DropdownMenuItem>
           </>
         ) : (
-          <DropdownMenuItem onClick={handleSignIn} disabled={loading}>
+          <DropdownMenuItem
+            onClick={handleSignIn}
+            disabled={loading}
+          >
             <LogIn className="mr-2 h-4 w-4" />
             Sign In with Google
           </DropdownMenuItem>
@@ -93,4 +127,4 @@ export function AuthButton() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}

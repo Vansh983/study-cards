@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -20,13 +20,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    console.log('Initializing authentication state...');
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
+      console.log(
+        currentUser
+          ? `User signed in: ${currentUser.displayName}`
+          : 'No user signed in'
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('Unsubscribing from auth state changes');
+      unsubscribe();
+    };
   }, []);
+
+  // Debug current auth state
+  useEffect(() => {
+    console.log('Current auth state:', user?.email || 'no user');
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
