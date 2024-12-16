@@ -24,13 +24,13 @@ interface ChatMenuProps {
   isLoading?: boolean;
 }
 
-export function ChatMenu({ 
-  chats, 
-  onChatSelect, 
-  currentUser, 
-  onChatsChange, 
+export function ChatMenu({
+  chats,
+  onChatSelect,
+  currentUser,
+  onChatsChange,
   onNewChat,
-  isLoading = false 
+  isLoading = false
 }: ChatMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -43,19 +43,19 @@ export function ChatMenu({
       </SheetTrigger>
       <SheetContent side="left">
         <SheetHeader>
-          <SheetTitle>Your Chats</SheetTitle>
+          <SheetTitle>Old Rots</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-4 mt-4">
-          <Button 
+          <Button
             onClick={() => {
               onNewChat();
               setIsOpen(false);
-            }} 
+            }}
             className="w-full"
             disabled={!currentUser}
           >
             <Plus className="mr-2 h-4 w-4" />
-            New Chat
+            New Rot
           </Button>
           <div className="flex flex-col gap-2">
             {isLoading ? (

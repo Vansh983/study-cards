@@ -1,3 +1,16 @@
+export type BasicFlashcard = {
+    type: 'basic';
+    front: string;
+    back: string;
+};
+
+export type ImageFlashcard = {
+    type: 'image';
+    front: string;
+    imageUrl: string;
+    back: string;
+};
+
 export type VideoFlashcard = {
     type: 'video';
     front: {
@@ -8,8 +21,7 @@ export type VideoFlashcard = {
         explanation: string;
         additionalNotes?: string;
     };
-    duration?: number; // in seconds, to match TikTok-style short format
+    duration?: number;
 };
 
-// Update the Flashcard type union
 export type Flashcard = BasicFlashcard | ImageFlashcard | VideoFlashcard; 

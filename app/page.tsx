@@ -177,10 +177,10 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted">
-      <div className="container mx-auto px-4 py-8 max-w-3xl relative">
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted flex flex-col">
+      <div className="container mx-auto px-4 py-8 max-w-3xl flex-1 flex flex-col">
         {authLoading ? (
-          <div className="flex items-center justify-center h-screen">
+          <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
@@ -193,128 +193,132 @@ export default function Home() {
               onNewChat={handleNewChat}
             />
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSnappingView(!isSnappingView)}
-                className="relative"
-              >
-                <ViewIcon className="h-5 w-5" />
-              </Button>
-              <CardTypeSwitcher />
+              {flashcards.length > 0 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsSnappingView(!isSnappingView)}
+                    className="relative"
+                  >
+                    <ViewIcon className="h-5 w-5" />
+                  </Button>
+                  <CardTypeSwitcher />
+                </>
+              )}
               <AuthButton />
             </div>
 
-
-            {flashcards.length === 0 && (
-              <>
-                <div className="text-center mb-8">
-                  <div className="flex justify-center mb-4">
-                    <BrainCircuit className="h-12 w-12 text-primary" />
+            <div className="flex-1 flex flex-col items-center justify-center">
+              {flashcards.length === 0 && (
+                <>
+                  <div className="text-center mb-8">
+                    <div className="flex justify-center mb-4">
+                      <img src="/assets/brain-rot.png" alt="Logo" width={100} height={100} />
+                    </div>
+                    <div className="text-4xl font-bold mb-2">Doom scroll your way to knowledge</div>
+                    <p className="text-muted-foreground mt-4">
+                      Enter a topic or concept to generate dopamine-inducing flashcards
+                    </p>
                   </div>
-                  <h1 className="text-4xl font-bold mb-2">AI Flashcard Generator</h1>
-                  <p className="text-muted-foreground">
-                    Enter a topic or concept to generate interactive flashcards
-                  </p>
-                </div>
-                <Card className="p-6 mb-8">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
+                  <Card className="p-4 w-full max-w-2xl">
+                    <div className="flex flex-col gap-4">
                       <Input
                         placeholder="Enter a topic or concept..."
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        className="flex-1"
+                        className="w-full"
                       />
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-row">
                         <Button
                           variant="outline"
                           onClick={(e) => {
                             e.preventDefault();
                             document.getElementById('file-upload')?.click();
                           }}
-                          className="whitespace-nowrap"
+                          className="flex-1"
                         >
                           <Upload className="mr-2 h-4 w-4" />
-                          Upload Files
+                          Attach Notes
                         </Button>
-                        <input
-                          id="file-upload"
-                          type="file"
-                          multiple
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          className="hidden"
-                          onChange={handleFileChange}
-                        />
                         <Button
                           onClick={generateFlashcards}
                           disabled={loading}
-                          className="whitespace-nowrap"
+                          className="flex-1"
                         >
                           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Generate Flashcards
                         </Button>
                       </div>
-                    </div>
-                    {files.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 bg-secondary p-2 rounded-md"
-                          >
-                            <span className="text-sm">{file.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(index)}
-                              className="h-auto p-1"
+                      <input
+                        id="file-upload"
+                        type="file"
+                        multiple
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                      {files.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {files.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 bg-secondary p-2 rounded-md"
                             >
-                              ×
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </>
-            )}
+                              <span className="text-sm">{file.name}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(index)}
+                                className="h-auto p-1"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </>
+              )}
 
-            {isSnappingView ? (
-              <div className="relative w-full h-[80vh] overflow-y-auto snap-y snap-mandatory flex flex-col items-center mt-10">
-                <div className="w-full flex flex-col items-center gap-0">
-                  {flashcards.map((flashcard, index) => (
-                    <SnappingFlashcard
-                      key={index}
-                      flashcard={flashcard}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="relative h-[500px] w-full mt-10">
-                {flashcards.map((flashcard, index) => (
-                  <Flashcard
-                    key={index}
-                    flashcard={flashcard}
-                    onSwipe={handleSwipe}
-                    index={index}
-                    isTop={index === 0}
-                  />
-                ))}
-                {flashcards.length === 0 && !loading && (
-                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                    No flashcards yet. Generate some to get started!
+              {flashcards.length > 0 && (
+                isSnappingView ? (
+                  <div className="relative w-full h-[80vh] overflow-y-auto snap-y snap-mandatory flex flex-col items-center mt-10">
+                    <div className="w-full flex flex-col items-center gap-0">
+                      {flashcards.map((flashcard, index) => (
+                        <SnappingFlashcard
+                          key={index}
+                          flashcard={flashcard}
+                          index={index}
+                        />
+                      ))}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                ) : (
+                  <div className="relative h-[500px] w-full mt-10">
+                    {flashcards.map((flashcard, index) => (
+                      <Flashcard
+                        key={index}
+                        flashcard={flashcard}
+                        onSwipe={handleSwipe}
+                        index={index}
+                        isTop={index === 0}
+                      />
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
           </>
         )}
       </div>
-      <p className="text-center text-muted-foreground text-sm mt-4"><a href="https://www.linkedin.com/in/vanshsood" target="_blank" rel="noopener noreferrer">Made for fun by Vansh Sood</a></p>
+      <p className="text-center text-muted-foreground text-sm py-4">
+        <a href="https://www.linkedin.com/in/vanshsood" target="_blank" rel="noopener noreferrer">
+          Made for fun by Vansh (fellow dopamine addict)
+        </a>
+      </p>
     </main>
   );
 }
