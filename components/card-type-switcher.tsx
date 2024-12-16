@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CardTypeSwitcherProps {
@@ -12,6 +12,8 @@ export function CardTypeSwitcher({ className }: CardTypeSwitcherProps) {
     const setCardType = useAppStore((state) => state.setCardType);
     const isMuted = useAppStore((state) => state.isMuted);
     const toggleMute = useAppStore((state) => state.toggleMute);
+    const isPaused = useAppStore((state) => state.isPaused);
+    const togglePause = useAppStore((state) => state.togglePause);
 
     return (
         <div className={cn("flex items-center gap-2", className)}>
@@ -22,36 +24,23 @@ export function CardTypeSwitcher({ className }: CardTypeSwitcherProps) {
                 onClick={toggleMute}
             >
                 {isMuted ? (
-                    <VolumeX className="h-12 w-5" />
+                    <VolumeX className="h-5 w-5" />
                 ) : (
                     <Volume2 className="h-5 w-5" />
                 )}
             </Button>
-            {/* <div className="bg-black/20 backdrop-blur-sm rounded-full p-1 flex items-center">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                        "rounded-full px-4 text-sm font-medium",
-                        cardType === 'default' ? "bg-white text-black" : "text-white"
-                    )}
-                    onClick={() => setCardType('default')}
-                >
-                    Default
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                        "rounded-full px-4 text-sm font-medium",
-                        cardType === 'video' ? "bg-white text-black" : "text-white"
-                    )}
-                    onClick={() => setCardType('video')}
-                >
-                    Video
-                </Button>
-            </div> */}
-
-        </div >
+            <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:text-white/80"
+                onClick={togglePause}
+            >
+                {isPaused ? (
+                    <Play className="h-5 w-5" />
+                ) : (
+                    <Pause className="h-5 w-5" />
+                )}
+            </Button>
+        </div>
     );
 } 

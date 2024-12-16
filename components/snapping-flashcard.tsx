@@ -26,8 +26,9 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   const [spokenText, setSpokenText] = useState("");
   const [currentSide, setCurrentSide] = useState<'front' | 'back' | null>(null);
   const preferredVoices = useRef<SpeechSynthesisVoice[]>([]);
-  const [isPaused, setIsPaused] = useState(false);
   const isMuted = useAppStore((state) => state.isMuted);
+  const isPaused = useAppStore((state) => state.isPaused);
+  const togglePause = useAppStore((state) => state.togglePause);
 
   useEffect(() => {
     setMounted(true);
@@ -100,7 +101,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   }, [isMuted]);
 
   const handleCardTap = () => {
-    setIsPaused(!isPaused);
+    togglePause();
     if (!isPaused) {
       // Pause the audio
       window.speechSynthesis.cancel();
