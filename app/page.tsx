@@ -249,7 +249,7 @@ export default function Home() {
                       </div>
                       {showSignInMessage && (
                         <p className="text-sm text-center text-muted-foreground">
-                          Sign in, i need to know who's not studying
+                          Sign in, i need to know who's not studying 😡
                         </p>
                       )}
                       <input
