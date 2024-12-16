@@ -16,6 +16,12 @@ interface SnappingFlashcardProps {
   videoPath?: string;
 }
 
+const isSpeechSupported = () => {
+  return typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    'SpeechSynthesisUtterance' in window;
+};
+
 export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlashcardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const frontTextRef = useRef<HTMLDivElement>(null);
@@ -29,55 +35,61 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   const isMuted = useAppStore((state) => state.isMuted);
   const isPaused = useAppStore((state) => state.isPaused);
   const togglePause = useAppStore((state) => state.togglePause);
+  const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
 
   useEffect(() => {
     setMounted(true);
 
-    // Get initial list of voices and select preferred ones
-    const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      setVoices(availableVoices);
+    // Check speech synthesis support
+    const speechSupported = isSpeechSupported();
+    setIsSpeechAvailable(speechSupported);
 
-      // Filter for English voices first
-      const englishVoices = availableVoices.filter(
-        voice => voice.lang.startsWith('en-')
-      );
+    // Only setup speech synthesis if it's supported
+    if (speechSupported) {
+      const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        setVoices(availableVoices);
 
-      // Try to get common system voices (Microsoft David, Samantha, Google US)
-      const commonVoices = englishVoices.filter(voice =>
-        voice.name.includes('David') ||
-        voice.name.includes('Samantha') ||
-        voice.name.includes('Google') ||
-        voice.name.includes('Daniel') ||
-        voice.name.includes('Karen')
-      );
+        // Filter for English voices first
+        const englishVoices = availableVoices.filter(
+          voice => voice.lang.startsWith('en-')
+        );
 
-      // If we have common voices, use them, otherwise use first 3 English voices
-      preferredVoices.current = commonVoices.length >= 3
-        ? commonVoices.slice(0, 3)
-        : englishVoices.slice(0, 3);
+        // Try to get common system voices (Microsoft David, Samantha, Google US)
+        const commonVoices = englishVoices.filter(voice =>
+          voice.name.includes('David') ||
+          voice.name.includes('Samantha') ||
+          voice.name.includes('Google') ||
+          voice.name.includes('Daniel') ||
+          voice.name.includes('Karen')
+        );
 
-      // If no English voices, fall back to first 3 available voices
-      if (preferredVoices.current.length === 0) {
-        preferredVoices.current = availableVoices.slice(0, 3);
-      }
-    };
+        // If we have common voices, use them, otherwise use first 3 English voices
+        preferredVoices.current = commonVoices.length >= 3
+          ? commonVoices.slice(0, 3)
+          : englishVoices.slice(0, 3);
 
-    loadVoices();
-    // Chrome loads voices asynchronously
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+        // If no English voices, fall back to first 3 available voices
+        if (preferredVoices.current.length === 0) {
+          preferredVoices.current = availableVoices.slice(0, 3);
+        }
+      };
+
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
 
     // Setup intersection observer for auto-play
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !isPaused && !isMuted) {
+          if (entry.isIntersecting && !isPaused && !isMuted && isSpeechAvailable) {
             speak(flashcard.front, 'front');
           }
         });
       },
       {
-        threshold: 0.7, // Card needs to be 70% visible
+        threshold: 0.7,
       }
     );
 
@@ -87,7 +99,9 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
 
     return () => {
       observer.disconnect();
-      window.speechSynthesis.cancel();
+      if (isSpeechAvailable) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, [flashcard, isPaused, isMuted]);
 
@@ -119,41 +133,40 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   };
 
   const speak = (text: string, side: 'front' | 'back') => {
-    if ('speechSynthesis' in window && !isPaused && !isMuted) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      setSpokenText("");
-      setCurrentSide(side);
+    if (!isSpeechAvailable || isPaused || isMuted) return;
 
-      const utterance = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.cancel();
+    setSpokenText("");
+    setCurrentSide(side);
 
-      // Get random voice from preferred voices
-      if (preferredVoices.current.length > 0) {
-        const randomVoice = preferredVoices.current[
-          Math.floor(Math.random() * preferredVoices.current.length)
-        ];
-        utterance.voice = randomVoice;
-      }
+    const utterance = new SpeechSynthesisUtterance(text);
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setSpokenText("");
-        setCurrentSide(null);
-        // Auto-play back side after front is done
-        if (side === 'front' && !isPaused) {
-          setTimeout(() => speak(flashcard.back, 'back'), 500);
-        }
-      };
-
-      // Track spoken words
-      utterance.onboundary = (event) => {
-        const textUpToIndex = text.substring(0, event.charIndex + event.charLength);
-        setSpokenText(textUpToIndex);
-      };
-
-      window.speechSynthesis.speak(utterance);
+    // Get random voice from preferred voices
+    if (preferredVoices.current.length > 0) {
+      const randomVoice = preferredVoices.current[
+        Math.floor(Math.random() * preferredVoices.current.length)
+      ];
+      utterance.voice = randomVoice;
     }
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpokenText("");
+      setCurrentSide(null);
+      // Auto-play back side after front is done
+      if (side === 'front' && !isPaused) {
+        setTimeout(() => speak(flashcard.back, 'back'), 500);
+      }
+    };
+
+    // Track spoken words
+    utterance.onboundary = (event) => {
+      const textUpToIndex = text.substring(0, event.charIndex + event.charLength);
+      setSpokenText(textUpToIndex);
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const getHighlightedText = (text: string, isCurrentSide: boolean) => {
@@ -185,18 +198,20 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
           isPaused ? "bg-black" : "bg-black/50"
         )}
       />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-white hover:text-white/80 ml-4 absolute top-5 right-5"
-        onClick={(e) => {
-          e.stopPropagation();
-          speak(flashcard.front, 'front');
-        }}
-        disabled={isSpeaking}
-      >
-        <Eye className="h-5 w-5" />
-      </Button>
+      {isSpeechAvailable && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:text-white/80 ml-4 absolute top-5 right-5"
+          onClick={(e) => {
+            e.stopPropagation();
+            speak(flashcard.front, 'front');
+          }}
+          disabled={isSpeaking}
+        >
+          <Eye className="h-5 w-5" />
+        </Button>
+      )}
       <div className="relative w-full h-full p-6 flex flex-col">
         <div className="flex flex-col gap-6 h-full text-white">
           <div className="text-lg font-medium border-b border-white/20 pb-4 flex-1 overflow-auto">

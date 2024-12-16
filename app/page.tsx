@@ -177,7 +177,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted flex flex-col">
+    <main className="max-h-screen bg-gradient-to-b from-background to-muted flex flex-col">
       <div className="container mx-auto px-4 py-8 max-w-3xl flex-1 flex flex-col">
         {authLoading ? (
           <div className="flex items-center justify-center h-full">
