@@ -131,7 +131,7 @@ export async function POST(req: Request) {
     const messages: any[] = [
       {
         role: "system",
-        content: "You are a helpful assistant that creates flashcards. Analyze all provided content and return a JSON array of flashcard objects with 'front' and 'back' properties."
+        content: "You are a helpful assistant that creates flashcards. Analyze all provided content and return a JSON array of flashcard objects with 'front' and 'back' properties. Make sure you generate atleast 20 flashcards. These should be short and easy to understand. Make sure to include all the important information. If there is not enough content, generate as many as possible based on the topic. Use analogies and examples to make the flashcards more engaging and easier to understand."
       }
     ];
 

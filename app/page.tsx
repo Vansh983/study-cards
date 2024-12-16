@@ -28,6 +28,7 @@ export default function Home() {
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [isSnappingView, setIsSnappingView] = useState(true);
   const [showSignInMessage, setShowSignInMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -81,6 +82,7 @@ export default function Home() {
       return;
     }
     setShowSignInMessage(false);
+    setErrorMessage(null);
 
     if (!prompt.trim() && files.length === 0) {
       toast({
@@ -108,7 +110,7 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || 'Failed to generate flashcards');
+        throw new Error(data.error || data.message || data.details || 'Failed to generate flashcards');
       }
 
       setFlashcards(data.flashcards);
@@ -140,9 +142,11 @@ export default function Home() {
         description: "Flashcards generated and saved successfully!",
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate flashcards. Please try again.";
+      setErrorMessage(errorMessage);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate flashcards. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -247,6 +251,11 @@ export default function Home() {
                           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Generate Flashcards'}
                         </Button>
                       </div>
+                      {errorMessage && (
+                        <p className="text-sm text-destructive text-center">
+                          {"Facing some issues with being broke. Please wait for my credits to be refilled."}
+                        </p>
+                      )}
                       {showSignInMessage && (
                         <p className="text-sm text-center text-muted-foreground">
                           Sign in, i need to know who's not studying 😡
