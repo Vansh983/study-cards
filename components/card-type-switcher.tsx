@@ -15,7 +15,19 @@ export function CardTypeSwitcher({ className }: CardTypeSwitcherProps) {
 
     return (
         <div className={cn("flex items-center gap-2", className)}>
-            <div className="bg-black/20 backdrop-blur-sm rounded-full p-1 flex items-center">
+            <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:text-white/80"
+                onClick={toggleMute}
+            >
+                {isMuted ? (
+                    <VolumeX className="h-12 w-5" />
+                ) : (
+                    <Volume2 className="h-5 w-5" />
+                )}
+            </Button>
+            {/* <div className="bg-black/20 backdrop-blur-sm rounded-full p-1 flex items-center">
                 <Button
                     variant="ghost"
                     size="sm"
@@ -38,19 +50,8 @@ export function CardTypeSwitcher({ className }: CardTypeSwitcherProps) {
                 >
                     Video
                 </Button>
-            </div>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:text-white/80"
-                onClick={toggleMute}
-            >
-                {isMuted ? (
-                    <VolumeX className="h-5 w-5" />
-                ) : (
-                    <Volume2 className="h-5 w-5" />
-                )}
-            </Button>
-        </div>
+            </div> */}
+
+        </div >
     );
 } 

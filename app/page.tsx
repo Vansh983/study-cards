@@ -15,6 +15,7 @@ import { ChatMenu } from '@/components/chat-menu';
 import { AuthButton } from '@/components/auth-button';
 import type { Chat } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
+import { CardTypeSwitcher } from '@/components/card-type-switcher';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -200,6 +201,7 @@ export default function Home() {
               >
                 <ViewIcon className="h-5 w-5" />
               </Button>
+              <CardTypeSwitcher />
               <AuthButton />
             </div>
 

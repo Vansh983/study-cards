@@ -1,5 +1,3 @@
-// AuthButton.tsx
-
 "use client";
 
 import { useState } from 'react';
@@ -18,6 +16,7 @@ import {
   GoogleAuthProvider,
   signInWithRedirect,
   signOut as firebaseSignOut,
+  signInWithPopup,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -37,11 +36,7 @@ export function AuthButton() {
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({
-        prompt: 'select_account',
-      });
-      console.log('Initiating sign-in with popup...');
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
       console.log('Sign-in with popup completed');
     } catch (error) {
       console.error('Sign-in error:', error);

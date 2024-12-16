@@ -1,6 +1,5 @@
 // firebase.ts
-
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
     getAuth,
     connectAuthEmulator,
@@ -9,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
+// Firebase configuration using environment variables
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
@@ -18,13 +18,13 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase App only if not already initialized
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
 
-// Initialize Auth Persistence with Proper Error Handling
+// Set Auth Persistence
 setPersistence(auth, browserLocalPersistence)
     .then(() => {
         console.log('Firebase Auth persistence set to browserLocalPersistence');

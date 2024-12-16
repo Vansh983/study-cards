@@ -21,7 +21,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     console.log('Initializing authentication state...');
+
+    // // Handle redirect result if using signInWithRedirect
+    // // If using signInWithPopup, this might not be necessary
+    // getRedirectResult(auth)
+    //   .then((result) => {
+    //     if (result) {
+    //       console.log('getRedirectResult', result);
+    //       // Optionally, you can set the user here if needed
+    //       setUser(result.user);
+    //     }
+    //   })
+    //   .catch((error) => {
+    //     console.error('Error handling redirect result:', error);
+    //   });
+
+    // Listen for auth state changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('onAuthStateChanged', currentUser);
+
       setUser(currentUser);
       setLoading(false);
       console.log(
@@ -31,12 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     });
 
-    return () => {
-      console.log('Unsubscribing from auth state changes');
-      unsubscribe();
-    };
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
-
   // Debug current auth state
   useEffect(() => {
     console.log('Current auth state:', user?.email || 'no user');

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Flashcard as FlashcardType } from '@/lib/types';
 import { BackgroundVideo } from './background-video';
 import { Button } from '@/components/ui/button';
-import { Volume2 } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 
@@ -70,7 +70,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !isPaused) {
+          if (entry.isIntersecting && !isPaused && !isMuted) {
             speak(flashcard.front, 'front');
           }
         });
@@ -88,7 +88,16 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       observer.disconnect();
       window.speechSynthesis.cancel();
     };
-  }, [flashcard, isPaused]);
+  }, [flashcard, isPaused, isMuted]);
+
+  useEffect(() => {
+    if (isMuted) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setSpokenText("");
+      setCurrentSide(null);
+    }
+  }, [isMuted]);
 
   const handleCardTap = () => {
     setIsPaused(!isPaused);
@@ -131,7 +140,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
         setSpokenText("");
         setCurrentSide(null);
         // Auto-play back side after front is done
-        if (side === 'front' && !isPaused && !isMuted) {
+        if (side === 'front' && !isPaused) {
           setTimeout(() => speak(flashcard.back, 'back'), 500);
         }
       };
@@ -185,7 +194,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
         }}
         disabled={isSpeaking}
       >
-        <Volume2 className="h-5 w-5" />
+        <Eye className="h-5 w-5" />
       </Button>
       <div className="relative w-full h-full p-6 flex flex-col">
         <div className="flex flex-col gap-6 h-full text-white">
