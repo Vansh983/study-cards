@@ -201,15 +201,14 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
         <div className="flex flex-col gap-6 h-full text-white">
           <div className="text-lg font-medium border-b border-white/20 pb-4 flex-1 overflow-auto">
             <div className="flex justify-between items-center h-full">
-              <div ref={frontTextRef} className="flex-1 flex items-center justify-center text-center">
+              <div ref={frontTextRef} className="items-center justify-center text-center">
                 {getHighlightedText(flashcard.front, currentSide === 'front')}
               </div>
-
             </div>
           </div>
           <div className="text-lg flex-1 overflow-auto">
             <div className="flex justify-between items-center h-full">
-              <div ref={backTextRef} className="flex-1 flex items-center justify-center text-center">
+              <div ref={backTextRef} className="items-center justify-center text-center">
                 {getHighlightedText(flashcard.back, currentSide === 'back')}
               </div>
               {/* <Button 
