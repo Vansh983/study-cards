@@ -27,6 +27,7 @@ export default function Home() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [isSnappingView, setIsSnappingView] = useState(true);
+  const [showSignInMessage, setShowSignInMessage] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -75,19 +76,16 @@ export default function Home() {
   };
 
   const generateFlashcards = async () => {
+    if (!user) {
+      setShowSignInMessage(true);
+      return;
+    }
+    setShowSignInMessage(false);
+
     if (!prompt.trim() && files.length === 0) {
       toast({
         title: "Error",
         description: "Please enter a prompt or upload files",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Please sign in to generate flashcards",
         variant: "destructive",
       });
       return;
@@ -177,7 +175,7 @@ export default function Home() {
   };
 
   return (
-    <main className="max-h-screen bg-gradient-to-b from-background to-muted flex flex-col">
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted flex flex-col">
       <div className="container mx-auto px-4 py-8 max-w-3xl flex-1 flex flex-col">
         {authLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -246,10 +244,14 @@ export default function Home() {
                           disabled={loading}
                           className="flex-1"
                         >
-                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Generate Flashcards
+                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Generate Flashcards'}
                         </Button>
                       </div>
+                      {showSignInMessage && (
+                        <p className="text-sm text-center text-muted-foreground">
+                          Sign in, i need to know who's not studying
+                        </p>
+                      )}
                       <input
                         id="file-upload"
                         type="file"
