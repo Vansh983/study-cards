@@ -120,13 +120,13 @@ export async function POST(req: Request) {
     // Check usage limits
 
 
-    const usageCheck = await checkUserUsage(user_id);
-    if (!usageCheck.canUse) {
-      return NextResponse.json(
-        { error: usageCheck.reason },
-        { status: 402 } // 402 Payment Required
-      );
-    }
+    // const usageCheck = await checkUserUsage(user_id);
+    // if (!usageCheck.canUse) {
+    //   return NextResponse.json(
+    //     { error: usageCheck.reason },
+    //     { status: 402 } // 402 Payment Required
+    //   );
+    // }
 
 
 
