@@ -191,7 +191,7 @@ export async function POST(req: Request) {
     const completion: OpenAI.Chat.ChatCompletionCreateParams = {
       model: "gpt-4o",
       messages: messages,
-      max_tokens: 4096,
+      max_tokens: 2048,
       response_format: { type: "json_object" },
     };
 
