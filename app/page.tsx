@@ -253,7 +253,7 @@ export default function Home() {
                       </div>
                       {errorMessage && (
                         <p className="text-sm text-destructive text-center">
-                          {"Facing some issues with being broke. Please wait for my credits to be refilled."}
+                          {"Facing some issues with being broke. I can only let you generate 5 feeds in a day. Would you be willing to pay for more? If yes, text me."}
                         </p>
                       )}
                       {showSignInMessage && (

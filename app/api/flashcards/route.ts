@@ -90,7 +90,7 @@ async function checkUserUsage(userId: string): Promise<{ canUse: boolean, reason
     }
 
     const usageData = usageDoc.data();
-    if (usageData.count >= 1) {
+    if (usageData.count >= 5) {
       return {
         canUse: false,
         reason: 'Daily free limit reached. Please upgrade to continue using the service.'
@@ -118,6 +118,8 @@ export async function POST(req: Request) {
     const user_id = formData.get('user_id') as string;
 
     // Check usage limits
+
+
     const usageCheck = await checkUserUsage(user_id);
     if (!usageCheck.canUse) {
       return NextResponse.json(
@@ -126,7 +128,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("Received request with:", { prompt, filesCount: files.length, user_id });
+
 
     const messages: any[] = [
       {
