@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -22,6 +22,8 @@ interface ChatMenuProps {
   onChatsChange: (chats: Chat[]) => void;
   onNewChat: () => void;
   isLoading?: boolean;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
 export function ChatMenu({
@@ -30,7 +32,9 @@ export function ChatMenu({
   currentUser,
   onChatsChange,
   onNewChat,
-  isLoading = false
+  isLoading = false,
+  onSignIn,
+  onSignOut
 }: ChatMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -76,6 +80,33 @@ export function ChatMenu({
                   {chat.title || 'Untitled Chat'}
                 </Button>
               ))
+            )}
+          </div>
+          <div className="mt-auto pt-4 border-t">
+            {currentUser ? (
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  onSignOut();
+                  setIsOpen(false);
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  onSignIn();
+                  setIsOpen(false);
+                }}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Button>
             )}
           </div>
         </div>
