@@ -74,4 +74,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is private and proprietary. 
+This project is licensed under the Study Quick License. See the [LICENSE](LICENSE) file for details.
+
+The software may be used, modified, and distributed for non-commercial purposes only. Any commercial use requires explicit written permission from Vansh Sood. 
