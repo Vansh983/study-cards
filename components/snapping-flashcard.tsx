@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
+import { useVideos } from '@/lib/video-context';
 
 interface SnappingFlashcardProps {
   flashcard: FlashcardType;
@@ -36,6 +37,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   const isPaused = useAppStore((state) => state.isPaused);
   const togglePause = useAppStore((state) => state.togglePause);
   const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
+  const { isLoading: isVideosLoading } = useVideos();
 
   useEffect(() => {
     setMounted(true);
@@ -191,7 +193,7 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
       transition={{ duration: 0.3, delay: index * 0.1 }}
       onClick={handleCardTap}
     >
-      {mounted && <BackgroundVideo isVisible={true} videoPath={videoPath} />}
+      {mounted && !isVideosLoading && <BackgroundVideo isVisible={true} videoPath={videoPath} />}
       <div
         className={cn(
           "absolute inset-0 backdrop-blur-[2px] transition-all duration-300",
@@ -226,18 +228,6 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
               <div ref={backTextRef} className="items-center justify-center text-center">
                 {getHighlightedText(flashcard.back, currentSide === 'back')}
               </div>
-              {/* <Button 
-                variant="ghost" 
-                size="icon"
-                className="text-white hover:text-white/80 ml-4"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  speak(flashcard.back, 'back');
-                }}
-                disabled={isSpeaking}
-              >
-                <Volume2 className="h-5 w-5" />
-              </Button> */}
             </div>
           </div>
         </div>

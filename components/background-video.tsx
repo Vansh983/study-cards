@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-
-// Add array of video paths
-const VIDEO_PATHS = [
-  '/background.mp4',
-  '/background2.mp4',
-  '/background3.mp4',
-];
+import { useVideos, getRandomVideo } from '@/lib/video-context';
 
 interface BackgroundVideoProps {
   isVisible: boolean;
@@ -18,12 +12,32 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const { videos, isLoading } = useVideos();
+  const [selectedVideo, setSelectedVideo] = useState<HTMLVideoElement | null>(null);
 
-  // Select random video path if none provided
-  const selectedVideoPath = videoPath || VIDEO_PATHS[Math.floor(Math.random() * VIDEO_PATHS.length)];
+  // Select a video when component mounts or videos change
+  useEffect(() => {
+    if (videos.length > 0) {
+      // If a specific video path is provided, find that video
+      if (videoPath) {
+        const video = videos.find(v => v.path === videoPath);
+        if (video) {
+          setSelectedVideo(video.element);
+        } else {
+          // Fallback to random if path not found
+          const randomVideo = getRandomVideo(videos);
+          setSelectedVideo(randomVideo?.element || null);
+        }
+      } else {
+        // Otherwise get a random video
+        const randomVideo = getRandomVideo(videos);
+        setSelectedVideo(randomVideo?.element || null);
+      }
+    }
+  }, [videos, videoPath]);
 
   useEffect(() => {
-    if (!videoRef.current || !isLoaded || hasError) return;
+    if (!videoRef.current || !selectedVideo || !isLoaded || hasError || isLoading) return;
 
     const video = videoRef.current;
 
@@ -39,14 +53,12 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
         try {
           await video.play();
           console.log('Video play');
-
         } catch (err) {
           if (err instanceof Error && err.name !== 'AbortError') {
             console.error('Video play failed:', err);
             setHasError(true);
           }
           console.log('Video paused');
-
         }
       };
 
@@ -62,12 +74,11 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
       try {
         video.pause();
         console.log('Video paused');
-
       } catch (err) {
         // Ignore cleanup errors
       }
     };
-  }, [isLoaded, hasError]);
+  }, [isLoaded, hasError, selectedVideo, isLoading]);
 
   const handleLoadedMetadata = () => {
     setIsLoaded(true);
@@ -79,8 +90,8 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
     console.error('Video loading error');
   };
 
-  if (hasError) {
-    return null; // Don't render anything if there's an error
+  if (hasError || isLoading || !selectedVideo) {
+    return null; // Don't render anything if there's an error or still loading
   }
 
   return (
@@ -93,8 +104,7 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
       preload="auto"
       onLoadedMetadata={handleLoadedMetadata}
       onError={handleError}
-    >
-      <source src={selectedVideoPath} type="video/mp4" />
-    </video>
+      src={selectedVideo.src}
+    />
   );
 } 
