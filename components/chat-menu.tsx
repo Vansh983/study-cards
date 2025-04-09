@@ -82,33 +82,6 @@ export function ChatMenu({
               ))
             )}
           </div>
-          <div className="mt-auto pt-4 border-t">
-            {currentUser ? (
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  onSignOut();
-                  setIsOpen(false);
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  onSignIn();
-                  setIsOpen(false);
-                }}
-              >
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign In
-              </Button>
-            )}
-          </div>
         </div>
       </SheetContent>
     </Sheet>
