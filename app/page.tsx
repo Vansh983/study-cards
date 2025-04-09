@@ -193,6 +193,8 @@ export default function Home() {
               currentUser={user?.uid}
               onChatsChange={setChats}
               onNewChat={handleNewChat}
+              onSignIn={() => { }}
+              onSignOut={() => { }}
             />
             <div className="absolute top-4 right-4 flex items-center gap-2">
               {flashcards.length > 0 && (
