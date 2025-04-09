@@ -14,10 +14,12 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
   const [hasError, setHasError] = useState(false);
   const { videos, isLoading } = useVideos();
   const [selectedVideo, setSelectedVideo] = useState<HTMLVideoElement | null>(null);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(true);
 
   // Select a video when component mounts or videos change
   useEffect(() => {
     if (videos.length > 0) {
+      setIsLoadingVideo(true);
       // If a specific video path is provided, find that video
       if (videoPath) {
         const video = videos.find(v => v.path === videoPath);
@@ -52,19 +54,17 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
       const attemptPlay = async () => {
         try {
           await video.play();
-          console.log('Video play');
+          setIsLoadingVideo(false);
         } catch (err) {
           if (err instanceof Error && err.name !== 'AbortError') {
             console.error('Video play failed:', err);
             setHasError(true);
           }
-          console.log('Video paused');
         }
       };
 
       attemptPlay();
     } catch (err) {
-      console.log('Video paused');
       console.error('Video control error:', err);
       setHasError(true);
     }
@@ -73,7 +73,6 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
     return () => {
       try {
         video.pause();
-        console.log('Video paused');
       } catch (err) {
         // Ignore cleanup errors
       }
@@ -87,24 +86,32 @@ export function BackgroundVideo({ isVisible, videoPath }: BackgroundVideoProps) 
 
   const handleError = () => {
     setHasError(true);
+    setIsLoadingVideo(false);
     console.error('Video loading error');
   };
 
   if (hasError || isLoading || !selectedVideo) {
-    return null; // Don't render anything if there's an error or still loading
+    return (
+      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-900 to-black animate-pulse" />
+    );
   }
 
   return (
-    <video
-      ref={videoRef}
-      className={`absolute inset-0 w-full h-full object-cover`}
-      loop
-      muted
-      playsInline
-      preload="auto"
-      onLoadedMetadata={handleLoadedMetadata}
-      onError={handleError}
-      src={selectedVideo.src}
-    />
+    <>
+      {isLoadingVideo && (
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-900 to-black animate-pulse" />
+      )}
+      <video
+        ref={videoRef}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isLoadingVideo ? 'opacity-0' : 'opacity-100'}`}
+        loop
+        muted
+        playsInline
+        preload="auto"
+        onLoadedMetadata={handleLoadedMetadata}
+        onError={handleError}
+        src={selectedVideo.src}
+      />
+    </>
   );
 } 

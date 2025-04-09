@@ -37,7 +37,14 @@ export function SnappingFlashcard({ flashcard, index, videoPath }: SnappingFlash
   const isPaused = useAppStore((state) => state.isPaused);
   const togglePause = useAppStore((state) => state.togglePause);
   const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
-  const { isLoading: isVideosLoading } = useVideos();
+  const { isLoading: isVideosLoading, preloadVideo } = useVideos();
+
+  // Preload the next video when this card is mounted
+  useEffect(() => {
+    if (videoPath) {
+      preloadVideo(videoPath);
+    }
+  }, [videoPath, preloadVideo]);
 
   useEffect(() => {
     setMounted(true);
